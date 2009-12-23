@@ -42,7 +42,7 @@ sub get_player_count
 	if ($pj->{irc_announce_joins} && !$store{"playerid_byslot_$slot"} && $ip ne 'bot') {
 		out irc => 0, "PRIVMSG $config{irc_channel} :\00309+ join\017: $nick\017" . 
 			($pj->{irc_show_playerip} ? " (\00304$ip\017)" : '') .
-			($pj->{irc_show_country} && $cn ? " CN: \00304" . $cn . "\017" : '') .
+			($pj->{irc_show_country} && $cn ? " CN: \00304$cn\017" : '') .
 			($pj->{irc_show_mapname} ? " playing on \00304$store{map}\017" : '') .
 			($pj->{irc_show_amount_of_players} ? " players: \00304" . (get_player_count()+1) . "\017/$store{slots_max}" : '');
 	}
@@ -62,7 +62,7 @@ sub get_player_count
 	if ($pj->{irc_announce_parts} && defined $store{"playernick_byid_$id"} && $store{"playerip_byid_$id"} ne 'bot') {
 		out irc => 0, "PRIVMSG $config{irc_channel} :\00304- part\017: " . $store{"playernick_byid_$id"} . "\017" . 
 			($pj->{irc_show_playerip} ? " (\00304" . $store{"playerip_byid_$id"} . "\017)" : '') .
-			($pj->{irc_show_country} && $cn ? " CN: \00304" . $cn  . "\017": '') .
+			($pj->{irc_show_country} && $cn ? " CN: \00304$cn\017": '') .
 			($pj->{irc_show_mapname} ? " playing on \00304$store{map}\017" : '') .
 			($pj->{irc_show_amount_of_players} ? " players: \00304" . (get_player_count()-1) . "\017/$store{slots_max}" : '');
 	}
