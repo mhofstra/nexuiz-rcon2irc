@@ -652,7 +652,7 @@ sub killdeathratio {
 	
 	# Here's the explanation of how this algorithm works:
 	# First we generate an array with all players that have joined up to now and then sort this array in such a way
-	# that the next and previous values match up to players of equal strength and playing type. This way all the
+	# that the next and previous values match up to players of equal strength and playing type. For CTF all the
 	# flagrunners are matched up and the defenders are matched up based on the results of the last played map.
 	# A visualization of the array would be [][][][][][][][] for eight players now.
 	
@@ -667,11 +667,72 @@ sub killdeathratio {
 	}
 	@plrs = @splrs;
 	
-	@plrs = sort { # sort players by strength
-		return -1 unless ($b && $tp->{lastround}->[$b]);
-		return 1 unless ($a && $tp->{lastround}->[$a]);
-		return ($tp->{lastround}->[$b]->{score} <=> $tp->{lastround}->[$a]->{score}); # TODO more intelligent algorithm?
-	} @plrs;
+	if ($store{map} =~ m/^ctf/i) { # CTF optimized code
+		@plrs = sort {
+			return 0 unless ($a && $tp->{lastround}->[$a] && $b && $tp->{lastround}->[$b]);
+			return -1 unless ($b && $tp->{lastround}->[$b]);
+			return 1 unless ($a && $tp->{lastround}->[$a]);
+			
+			# TODO add sufficient data checks
+			
+			my $playtypea;
+			if ($tp->{lastround}->[$b]->{fckills} + $tp->{lastround}->[$b]->{returns} > 0) {
+				$playtypea = ($tp->{lastround}->[$a]->{caps} + $tp->{lastround}->[$a]->{pickups}) /
+							($tp->{lastround}->[$a]->{fckills} + $tp->{lastround}->[$a]->{returns});
+			} else {
+				$playtypea = ($tp->{lastround}->[$a]->{caps} + $tp->{lastround}->[$a]->{pickups});
+			}
+			
+			my $playtypeb;
+			if ($tp->{lastround}->[$b]->{fckills} + $tp->{lastround}->[$b]->{returns} > 0) {
+				$playtypeb = ($tp->{lastround}->[$b]->{caps} + $tp->{lastround}->[$b]->{pickups}) /
+							($tp->{lastround}->[$b]->{fckills} + $tp->{lastround}->[$b]->{returns});
+			} else {
+				$playtypeb = ($tp->{lastround}->[$b]->{caps} + $tp->{lastround}->[$b]->{pickups});
+			}
+			
+			
+			if ($playtypea > 0.5 && $playtypeb > 0.5) { # both are attackers
+				return ($tp->{lastround}->[$a]->{caps} / $tp->{lastround}->[$a]->{pickups}) <=>
+					   ($tp->{lastround}->[$b]->{caps} / $tp->{lastround}->[$b]->{pickups}); # sort by successrate
+			}
+			
+			return -1 if ($playtypea > 0.5);
+			return 1 if ($playtypeb > 0.5);
+			
+			if ($playtypea <= 0.5 && $playtypeb <= 0.5) { # both are defenders
+				return ($tp->{lastround}->[$a]->{kills} / $tp->{lastround}->[$a]->{deaths}) <=>
+					   ($tp->{lastround}->[$b]->{kills} / $tp->{lastround}->[$b]->{deaths}); # sort by k-d ratio TODO needs divide by zero check?
+			}
+			
+			return 1 if ($playtypea <= 0.5);
+			return -1 if ($playtypeb <= 0.5);
+			
+			return 0;
+		} @plrs;
+	}
+	
+	else if ($store{map} =~ m/^tdm/i) { # TDM optimized code
+		@plrs = sort { 
+			return 0 unless ($a && $tp->{lastround}->[$a] && $b && $tp->{lastround}->[$b]);
+			return -1 unless ($b && $tp->{lastround}->[$b]);
+			return 1 unless ($a && $tp->{lastround}->[$a]);
+			
+			my $ratioa = $tp->{lastround}->[$a]->{kills} / $tp->{lastround}->[$a]->{deaths};
+			my $ratiob = $tp->{lastround}->[$b]->{kills} / $tp->{lastround}->[$b]->{deaths};
+			return $ratioa <=> $ratiob;
+		} @plrs;
+	}
+	
+	else {
+		@plrs = sort { # sort players by score, should be safe for any unsupported gametypes
+			return 0 unless ($a && $tp->{lastround}->[$a] && $b && $tp->{lastround}->[$b]);
+			return -1 unless ($b && $tp->{lastround}->[$b]);
+			return 1 unless ($a && $tp->{lastround}->[$a]);
+			
+			return ($tp->{lastround}->[$b]->{score} <=> $tp->{lastround}->[$a]->{score});
+		} @plrs;
+	}
 	
 	# Now that we have an array with matched up players, we start dividing them in teams. The rule here is that 
 	# players of 'equal' strength cannot be in the same team. If there are 2 teams the array would look like this:
