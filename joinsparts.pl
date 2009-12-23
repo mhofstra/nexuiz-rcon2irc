@@ -14,7 +14,11 @@
 # current code has been tested against version 0.8 of the Geo::IPfree module
 # You can obtain a copy here: http://search.cpan.org/~bricas/Geo-IPfree-0.8/lib/Geo/IPfree.pm
 # Place the 'Geo' dir in the same directory as this plugin or anywhere in @INC.
-if ($pj{irc_show_country}) { use Geo::IPfree; $pj{geo} = Geo::IPfree->new; } 
+if ($pj{irc_show_country}) { 
+	use Geo::IPfree; 
+	$pj{geo} = Geo::IPfree->new;
+	$pj{geo}->Faster; # Due to a relatively large amount of lookups, this is probably a good idea
+} 
 
 $store{plugin_joinsparts} = \%pj; }
 
@@ -34,7 +38,7 @@ sub get_player_count
 [ dp => q{:join:(\d+):(\d+):([^:]*):(.*)} => sub {
 	my ($id, $slot, $ip, $nick) = @_;
 	my $pj = $store{plugin_joinsparts};
-	$pj->{slot2id}->[$slot] = $id;
+	$pj->{alive_check}->[$slot] = 1;
 	
 	my ($cn) = $pj->{geo}->LookUp($ip) if ($pj->{irc_show_country} && $ip ne 'bot');
 	
@@ -78,7 +82,7 @@ sub get_player_count
 	my $pj = $store{plugin_joinsparts};
 	if (time() - $store{map_starttime} > 180) { # make sure the map has been played at least 3 minutes
 		for (1 .. $store{slots_max}) {
-			if ($store{"playerid_byslot_$_"} && !$pj->{slot2id}->[$_]) {
+			if ($store{"playerid_byslot_$_"} && !$pj->{alive_check}->[$_]) {
 				my $id = $store{"playerid_byslot_$_"};
 				$store{"playernickraw_byid_$id"} = undef;
 				$store{"playernick_byid_$id"} = undef;
@@ -88,5 +92,5 @@ sub get_player_count
 			}
 		}
 	}
-	$pj->{slot2id} = ();
+	$pj->{alive_check} = ();
 } ],
