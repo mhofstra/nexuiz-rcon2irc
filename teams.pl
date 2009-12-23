@@ -712,7 +712,7 @@ sub killdeathratio {
 		} @plrs;
 	}
 	
-	else if ($store{map} =~ m/^tdm/i) { # TDM optimized code
+	elsif ($store{map} =~ m/^tdm/i) { # TDM optimized code
 		@plrs = sort { 
 			return 0 unless ($a && $tp->{lastround}->[$a] && $b && $tp->{lastround}->[$b]);
 			return -1 unless ($b && $tp->{lastround}->[$b]);
