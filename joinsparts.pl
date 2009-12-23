@@ -33,10 +33,8 @@ sub get_player_count
 	my ($id, $slot, $ip, $nick) = @_;
 	my $pj = $store{plugin_joinsparts};
 	$pj->{slot2id}->[$slot] = $id;
-	my $cn;
-	if ($pj->{irc_show_country} && $ip ne 'bot') {
-		($cn) = $pj->{geo}->LookUp($ip);
-	}
+	
+	my ($cn) = $pj->{geo}->LookUp($ip) if ($pj->{irc_show_country} && $ip ne 'bot');
 	
 	$nick = color_dp2irc $nick;
 	if ($pj->{irc_announce_joins} && !$store{"playerid_byslot_$slot"} && $ip ne 'bot') {
@@ -54,10 +52,8 @@ sub get_player_count
 	my ($id) = @_;
 	my $pj = $store{plugin_joinsparts};
 	
-	my $cn;
-	if ($pj->{irc_show_country} && $ip ne 'bot') {
-		($cn) = $pj->{geo}->LookUp($store{"playerip_byid_$id"});
-	}
+	my $ip = $store{"playerip_byid_$id"};
+	my ($cn) = $pj->{geo}->LookUp($ip) if ($pj->{irc_show_country} && $ip ne 'bot');
 	
 	if ($pj->{irc_announce_parts} && defined $store{"playernick_byid_$id"} && $store{"playerip_byid_$id"} ne 'bot') {
 		out irc => 0, "PRIVMSG $config{irc_channel} :\00304- part\017: " . $store{"playernick_byid_$id"} . "\017" . 
