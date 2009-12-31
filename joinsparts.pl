@@ -92,4 +92,6 @@ sub get_player_count
 		}
 	}
 	$pj->{alive_check} = ();
+	
+	return 0;
 } ],
