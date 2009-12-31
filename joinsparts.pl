@@ -33,8 +33,7 @@ sub get_player_count
 	}
 	return $count;
 }
-
-# chat: Nexuiz server -> IRC channel, nick set
+# Catch joins and display requested info
 [ dp => q{:join:(\d+):(\d+):([^:]*):(.*)} => sub {
 	my ($id, $slot, $ip, $nick) = @_;
 	my $pj = $store{plugin_joinsparts};
@@ -79,17 +78,17 @@ sub get_player_count
 
 # Add some functionality that should clear 'ghost' clients that disconnect at unfortunate times
 [ dp => q{:end} => sub {
+	return 0 unless (time() - $store{map_starttime} > 180); # make sure the map has been played at least 3 minutes
+	
 	my $pj = $store{plugin_joinsparts};
-	if (time() - $store{map_starttime} > 180) { # make sure the map has been played at least 3 minutes
-		for (1 .. $store{slots_max}) {
-			if ($store{"playerid_byslot_$_"} && !$pj->{alive_check}->[$_]) {
-				my $id = $store{"playerid_byslot_$_"};
-				$store{"playernickraw_byid_$id"} = undef;
-				$store{"playernick_byid_$id"} = undef;
-				$store{"playerip_byid_$id"} = undef;
-				$store{"playerslot_byid_$id"} = undef;
-				$store{"playerid_byslot_$_"} = undef;
-			}
+	for (1 .. $store{slots_max}) {
+		if ($store{"playerid_byslot_$_"} && !$pj->{alive_check}->[$_]) {
+			my $id = $store{"playerid_byslot_$_"};
+			$store{"playernickraw_byid_$id"} = undef;
+			$store{"playernick_byid_$id"} = undef;
+			$store{"playerip_byid_$id"} = undef;
+			$store{"playerslot_byid_$id"} = undef;
+			$store{"playerid_byslot_$_"} = undef;
 		}
 	}
 	$pj->{alive_check} = ();
