@@ -63,6 +63,10 @@
 	# percentage of difference between average lifetime, the lower this value - the sooner it will
 	# be triggered to attempt to fix the balance.
 	balance_threshold => 0.4, 
+	# people who attempt to join the winning team will be pushed back to the weaker team, however at
+	# some point the conditions may be so to allow him to move to the stronger team. Setting this
+	# value to 1 notifies IRC on successful manual joins too, if they have been refused before.
+	track_wtj => 1,
 	sdev_base => 0.1, # base for standard deviation to use, 0.25 performs p25-p75, 0.1 does p40-p60
 );
 
@@ -449,7 +453,10 @@ sub killdeathratio {
 					last;
 				}
 			}
-			return movetoteam($id, $small, 1) unless ($kicked); # player joined the larger team, but there are no bots - move him to the other team.
+			if (!$kicked) {
+				$tp->{wtjtrack}->[$id] = 1;
+				return movetoteam($id, $small, 1); # player joined the larger team, but there are no bots - move him to the other team.
+			}
 		}
 	}
 	
@@ -467,7 +474,11 @@ sub killdeathratio {
 		my $diff = abs($tbl->{highsize} - $tbl->{lowsize});
 		if ($tp->{balance_join_maxdiff} > 0 && $diff >= ceil(players_active() * $tp->{balance_join_maxdiff})) {
 			# player must join smallest team
-			return movetoteam($id, $smallest, ($jointype eq 'auto'? 0 : 1)) unless ($smallest == $team);
+			unless ($smallest == $team) {
+				$tp->{wtjtrack}->[$id] = 1 if ($jointype ne 'auto');
+				return movetoteam($id, $smallest, ($jointype eq 'auto'? 0 : 1));
+			}
+			
 			
 		# should we use lastround stats for balance?
 		} elsif ((time() - $store{map_starttime}) < $tp->{balance_lastround_time} && 0) { # TODO remove 0
@@ -479,13 +490,19 @@ sub killdeathratio {
 			unless ($smallest == $team || $tbl->{lowteam} == $team || # allow changes to larger team when it aids balance
 				$tbl->{highlt} - ($tbl->{highlt} * $tp->{balance_join_min_threshold}) < $tbl->{lowlt}) {  # check min threshold
 				
+				$tp->{wtjtrack}->[$id] = 1 if ($jointype ne 'auto');
 				return movetoteam($id, $smallest, ($jointype eq 'auto'? 0 : 1));
 			}
 			
-		} else {
-			# balance is off, join weakest team
-			return movetoteam($id, $tbl->{lowteam}, ($jointype eq 'auto'? 0 : 1)) unless ($team == $tbl->{lowteam});
+		} elsif ($team != $tbl->{lowteam}) { # balance is off, join weakest team
+			$tp->{wtjtrack}->[$id] = 1 if ($jointype ne 'auto');
+			return movetoteam($id, $tbl->{lowteam}, ($jointype eq 'auto'? 0 : 1));
 		}
+	}
+	
+	if ($tp->{track_wtj} && $tp->{wtjtrack}->[$id] && $jointype eq 'manual') { # echo tracked players
+		out irc => 0, "PRIVMSG $config{irc_channel} :\00307* balance\017 allowing tracked player " . $store{"playernick_byid_$id"} .
+			"\017 to join $teamname team " . stats_irc();
 	}
 	
 	$store{teams}->[$id] = $team;
@@ -667,13 +684,15 @@ sub killdeathratio {
 	}
 	@plrs = @splrs;
 	
-	if ($store{map} =~ m/^ctf/i) { # CTF optimized code
+	if ($store{map} =~ m/^ctf/i && 0) { # CTF optimized code TODO
 		@plrs = sort {
 			return 0 unless ($a && $tp->{lastround}->[$a] && $b && $tp->{lastround}->[$b]);
 			return -1 unless ($b && $tp->{lastround}->[$b]);
 			return 1 unless ($a && $tp->{lastround}->[$a]);
 			
-			# TODO add sufficient data checks
+			# TODO add more sufficient data checks
+			return -1 unless ($tp->{lastround}->[$b]->{deaths});
+			return 1 unless ($tp->{lastround}->[$a]->{deaths});
 			
 			my $playtypea;
 			if ($tp->{lastround}->[$b]->{fckills} + $tp->{lastround}->[$b]->{returns} > 0) {
@@ -692,21 +711,21 @@ sub killdeathratio {
 			}
 			
 			
-			if ($playtypea > 0.5 && $playtypeb > 0.5) { # both are attackers
+			if ($playtypea > 1 && $playtypeb > 1) { # both are attackers
 				return ($tp->{lastround}->[$a]->{caps} / $tp->{lastround}->[$a]->{pickups}) <=>
 					   ($tp->{lastround}->[$b]->{caps} / $tp->{lastround}->[$b]->{pickups}); # sort by successrate
 			}
 			
-			return -1 if ($playtypea > 0.5);
-			return 1 if ($playtypeb > 0.5);
+			return -1 if ($playtypea > 1);
+			return 1 if ($playtypeb > 1);
 			
-			if ($playtypea <= 0.5 && $playtypeb <= 0.5) { # both are defenders
+			if ($playtypea <= 1 && $playtypeb <= 1) { # both are defenders
 				return ($tp->{lastround}->[$a]->{kills} / $tp->{lastround}->[$a]->{deaths}) <=>
-					   ($tp->{lastround}->[$b]->{kills} / $tp->{lastround}->[$b]->{deaths}); # sort by k-d ratio TODO needs divide by zero check?
+					   ($tp->{lastround}->[$b]->{kills} / $tp->{lastround}->[$b]->{deaths}); # sort by k-d ratio
 			}
 			
-			return 1 if ($playtypea <= 0.5);
-			return -1 if ($playtypeb <= 0.5);
+			return 1 if ($playtypea <= 1);
+			return -1 if ($playtypeb <= 1);
 			
 			return 0;
 		} @plrs;
@@ -717,6 +736,9 @@ sub killdeathratio {
 			return 0 unless ($a && $tp->{lastround}->[$a] && $b && $tp->{lastround}->[$b]);
 			return -1 unless ($b && $tp->{lastround}->[$b]);
 			return 1 unless ($a && $tp->{lastround}->[$a]);
+			
+			return -1 unless ($tp->{lastround}->[$b]->{deaths});
+			return 1 unless ($tp->{lastround}->[$a]->{deaths});
 			
 			my $ratioa = $tp->{lastround}->[$a]->{kills} / $tp->{lastround}->[$a]->{deaths};
 			my $ratiob = $tp->{lastround}->[$b]->{kills} / $tp->{lastround}->[$b]->{deaths};
@@ -827,6 +849,7 @@ sub killdeathratio {
 	$store{plugin_teams}->{id2slot}->[$id] = undef;
 	$store{plugin_teams}->{lastround}->[$slot] = undef;
 	$store{plugin_teams}->{currentscore}->[$id] = undef;
+	$store{plugin_teams}->{wtjtrack}->[$id] = undef;
 	
 	my $team = $store{teams}->[$id];
 	$store{teams}->[$id] = undef;
@@ -892,6 +915,7 @@ sub killdeathratio {
 	$store{plugin_teams}->{balance_tryout_bool} = 1;
 	
 	$store{plugin_teams}->{game_ended} = 1;
+	$store{plugin_teams}->{wtjtrack} = undef;
 	return 0;
 } ],
 
