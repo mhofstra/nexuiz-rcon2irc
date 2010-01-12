@@ -690,7 +690,7 @@ sub killdeathratio {
 			return -1 unless ($b && $tp->{lastround}->[$b]);
 			return 1 unless ($a && $tp->{lastround}->[$a]);
 			
-			# TODO add more sufficient data checks
+			# TODO add more sufficient data checks (returns)
 			return -1 unless ($tp->{lastround}->[$b]->{deaths});
 			return 1 unless ($tp->{lastround}->[$a]->{deaths});
 			
@@ -928,6 +928,19 @@ sub killdeathratio {
 [ dp => q{"g_respawn_delay" is "([^"]*)" \["[^"]*"\]} => sub {
 	my ($respawn_delay) = @_;
 	$store{plugin_teams}->{respawn_delay} = $respawn_delay;
+	return 0;
+} ],
+
+[ dp => q{\001(.*?)\^7: (.*)} => sub {
+	my ($nickraw, $message) = @_;
+	$message = color_dp2none $message;
+	if ($message =~ m/^teams[!\.,]$/gi) {
+		my $nick = color_dp2irc $nickraw;
+		my $str = stats_irc();
+		out irc => 0, "PRIVMSG $config{irc_channel} : $nick\017 thinks the teams are unfair: $str";
+		return -1; # do not have it echoed again
+	}
+	
 	return 0;
 } ],
 
