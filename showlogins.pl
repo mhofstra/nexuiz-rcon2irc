@@ -10,26 +10,28 @@
 sub out($$@);
 sub schedule($$);
 
-schedule sub {
-	my ($timer) = @_;
-	if ($store{plugin_showlogins}->{failed_attempts}) {
-		# Generate hostmakes
-		my %temp = undef;
-		my @hostmasks = grep !$temp{$_}++, @{ $store{plugin_showlogins}->{failed_attempts} };
-		
-		foreach my $mask (@hostmasks) {
-			my $count = 0;
-			foreach (@{ $store{plugin_showlogins}->{failed_attempts} }) {
-				$count++ if ($_ eq $mask);
+if (defined %config) {
+	schedule sub {
+		my ($timer) = @_;
+		if ($store{plugin_showlogins}->{failed_attempts}) {
+			# Generate hostmakes
+			my %temp = undef;
+			my @hostmasks = grep !$temp{$_}++, @{ $store{plugin_showlogins}->{failed_attempts} };
+			
+			foreach my $mask (@hostmasks) {
+				my $count = 0;
+				foreach (@{ $store{plugin_showlogins}->{failed_attempts} }) {
+					$count++ if ($_ eq $mask);
+				}
+				
+				out irc => 0, "PRIVMSG $config{irc_channel} :\00305* login failed\017 \00304$mask\017 tried to become an IRC admin \00304$count\017 times";
 			}
 			
-			out irc => 0, "PRIVMSG $config{irc_channel} :\00305* login failed\017 \00304$mask\017 tried to become an IRC admin \00304$count\017 times";
+			$store{plugin_showlogins}->{failed_attempts} = undef;
 		}
-		
-		$store{plugin_showlogins}->{failed_attempts} = undef;
-	}
-	schedule $timer => $store{plugin_showlogins}->{failed_interval};;
-} => 1;
+		schedule $timer => $store{plugin_showlogins}->{failed_interval};;
+	} => 1;
+}
 
 [ irc => q{:(([^! ]*)![^ ]*) (?i:PRIVMSG) [^&#%]\S* :(.*)} => sub {
 	my ($hostmask, $nick, $command) = @_;

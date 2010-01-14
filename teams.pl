@@ -75,14 +75,16 @@ $store{plugin_teams} = \%tp; }
 sub out($$@);
 sub schedule($$);
 
-schedule sub {
-	my ($timer) = @_;
-	out dp => 0, "minplayers";
-	out dp => 0, "g_respawn_delay";
-	schedule $timer => 600;;
-} => 1;
-
-print "Loaded teams.pl by merlijn\n";
+if (defined %config) {
+	schedule sub {
+		my ($timer) = @_;
+		out dp => 0, "minplayers";
+		out dp => 0, "g_respawn_delay";
+		schedule $timer => 600;;
+	} => 1;
+	
+	print "Loaded teams.pl by merlijn\n";
+}
 
 my %team_code2name = (-1 => 'spec', 5 => 'red', 14 => 'blue', 13 => 'yellow', 10 => 'pink');
 my %jointypes = (1 => 'connect', 2 => 'auto', 3 => 'manual', 4 => 'spec', 5 => 'switch', 6 => 'adminmove');
