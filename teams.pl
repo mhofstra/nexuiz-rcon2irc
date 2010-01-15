@@ -936,7 +936,7 @@ sub killdeathratio {
 [ dp => q{\001(.*?)\^7: (.*)} => sub {
 	my ($nickraw, $message) = @_;
 	$message = color_dp2none $message;
-	if ($message =~ m/^!?teams[!\.,s;]?$/gi) {
+	if ($message =~ m/^!?(teams|unbalanced|unfair)[!\.,;]?$/gi) {
 		my $nick = color_dp2irc $nickraw;
 		my $str = stats_irc();
 		out irc => 0, "PRIVMSG $config{irc_channel} :\00307* balance\017: $nick\017 thinks the teams are unfair: $str";
