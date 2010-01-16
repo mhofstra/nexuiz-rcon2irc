@@ -297,7 +297,7 @@ sub movetoteam { # showmsg enables output to the user/irc
 	my ($id, $team, $showmsg) = @_;
 	$team = $team_code2name{$team} if ($team =~ m/^\d+$/);
 	out dp => 0, "settemp g_balance_kill_delay 0"; #don't make the player wait
-	out dp => 0, "movetoteam_$team " . $store{"playerslot_byid_$id"} . " $showmsg";
+	out dp => 0, "sv_cmd movetoteam " . $store{"playerslot_byid_$id"} . " $team " . ($showmsg ? '0' : '3');
 	out dp => 0, "settemp_restore g_balance_kill_delay";
 
 	return 0 unless ($showmsg);
