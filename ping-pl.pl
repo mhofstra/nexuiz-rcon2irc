@@ -49,7 +49,7 @@ sub out($$@);
 			out dp => 0, "tell #$no " . $pp->{kickmsg};
 		}
 		if ($pp->{warn_irc}) {
-			out irc => 0, "PRIVMSG $config{irc_channel} :* \00304kicking\017 " . $store{"playernick_byid_$id"} . "\017 for having a bad connection" .
+			out irc => 0, "PRIVMSG $config{irc_channel} :\00304* kicking\017 " . $store{"playernick_byid_$id"} . "\017 for having a bad connection" .
 				" (current ping/pl: \00304$ping/$pl\017)";
 		}
 		out dp => 0, "kick # $no bad connection";
@@ -63,7 +63,7 @@ sub out($$@);
 			out dp => 0, "tell #$no " . $pp->{warnmsg};
 		}
 		if ($pp->{warn_irc}) {
-			out irc => 0, "PRIVMSG $config{irc_channel} :* \00308warning\017 " . $store{"playernick_byid_$id"} . "\017 for having a bad connection" .
+			out irc => 0, "PRIVMSG $config{irc_channel} :\00308* warning\017 " . $store{"playernick_byid_$id"} . "\017 has a bad connection" .
 				" (current ping/pl: \00304$ping/$pl\017)";
 		}
 	}
