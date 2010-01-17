@@ -9,8 +9,8 @@
 # PLEASE CHOOSE SANE VALUES HERE !!!
 
 my %pp = (
-	max_ping => 300,
-	max_pl => 15,
+	max_ping => 350,
+	max_pl => 10,
 	warn_player => 1, # send a tell command to the player to notify of bad connection (0 or 1)
 	warn_irc => 1, # send a warning to irc to notify that a player has a bad connection (0 or 1)
 	warnings => 3, # how many times must ping/pl exceed the limit before a warning
@@ -49,7 +49,8 @@ sub out($$@);
 			out dp => 0, "tell #$no " . $pp{kickmsg};
 		}
 		if ($pp->{warn_irc}) {
-			out irc => 0, "PRIVMSG $config{irc_channel} :* \00304kicking\017 " . $store{"playernick_byid_$id"} . "\017 for having a bad connection";
+			out irc => 0, "PRIVMSG $config{irc_channel} :* \00304kicking\017 " . $store{"playernick_byid_$id"} . "\017 for having a bad connection" .
+				" (current ping/pl: \00304$ping/$pl\017)";
 		}
 		out dp => 0, "kick # $no bad connection";
 		$pp->{"violation_$id"} = undef;
@@ -62,7 +63,8 @@ sub out($$@);
 			out dp => 0, "tell #$no $pp{warnmsg}";
 		}
 		if ($pp->{warn_irc}) {
-			out irc => 0, "PRIVMSG $config{irc_channel} :* \00308warning\017 " . $store{"playernick_byid_$id"} . "\017 for having a bad connection";
+			out irc => 0, "PRIVMSG $config{irc_channel} :* \00308warning\017 " . $store{"playernick_byid_$id"} . "\017 for having a bad connection" .
+				" (current ping/pl: \00304$ping/$pl\017)";
 		}
 	}
 	return 0;
