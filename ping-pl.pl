@@ -8,7 +8,7 @@
 # packet or have a high ping every once in the while.
 # PLEASE CHOOSE SANE VALUES HERE !!!
 
-my %pp = (
+{ my %pp = (
 	max_ping => 350,
 	max_pl => 10,
 	warn_player => 1, # send a tell command to the player to notify of bad connection (0 or 1)
@@ -20,7 +20,7 @@ my %pp = (
 	kickmsg => 'You are getting kicked for having connection problems.'
 );
 
-$store{plugin_ping-pl} = \%pp;
+$store{plugin_ping-pl} = \%pp; }
 
 sub out($$@);
 
@@ -46,7 +46,7 @@ sub out($$@);
 	#do we have to kick the user?
 	if ((scalar @{ $pp->{"violation_$id"} }) >= $pp->{kick} && $pp->{kick} > 0) {
 		if ($pp->{warn_player}) {
-			out dp => 0, "tell #$no " . $pp{kickmsg};
+			out dp => 0, "tell #$no " . $pp->{kickmsg};
 		}
 		if ($pp->{warn_irc}) {
 			out irc => 0, "PRIVMSG $config{irc_channel} :* \00304kicking\017 " . $store{"playernick_byid_$id"} . "\017 for having a bad connection" .
@@ -60,7 +60,7 @@ sub out($$@);
 	#do we have to warn the user?
 	if ($warn && (scalar @{ $pp->{"violation_$id"} }) && ((scalar @{ $pp->{"violation_$id"} }) % $pp->{warnings}) == 0) {
 		if ($pp->{warn_player}) {
-			out dp => 0, "tell #$no $pp{warnmsg}";
+			out dp => 0, "tell #$no " . $pp->{warnmsg};
 		}
 		if ($pp->{warn_irc}) {
 			out irc => 0, "PRIVMSG $config{irc_channel} :* \00308warning\017 " . $store{"playernick_byid_$id"} . "\017 for having a bad connection" .
