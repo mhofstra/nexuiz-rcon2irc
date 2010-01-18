@@ -69,7 +69,7 @@ if (defined %config) {
 
 # failed rcon attempts
 [ dp => q{server denied rcon access to (.*)} => sub {
-	my ($name) = @_;
+	my ($name) = map { color_dp2irc $_ } @_;
 	my $sl = $store{plugin_showlogins};
 	
 	if ($sl->{show_rcon_failure}) {
