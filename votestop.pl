@@ -10,6 +10,11 @@
 
 $store{plugin_votestop} = \%vs; }
 
+# add a dependency on joinsparts.pl
+if (defined %config && $config{plugins} !~ m/joinsparts.pl /gi) {
+	die "votestop.pl depends on joinsparts.pl but it appears to not be loaded.";
+}
+
 sub out($$@);
 
 sub time_to_seconds {
@@ -21,7 +26,10 @@ sub time_to_seconds {
 [ dp => q{:vote:vcall:(\d+):(.*)} => sub {
 	my ($id, $command) = @_;
 	$command = color_dp2irc $command;
-	$vs = $store{plugin_votestop};
+	my $vs = $store{plugin_votestop};
+	
+	# use joinsparts for player check, people may call any votes when they're alone.
+	return 0 unless (get_player_count() > 1);
 	
 	if ($vs->{mapstart} && (time() - $store{map_starttime}) < $vs->{mapstart}) {
 		if ($command =~ m/^(endmatch|restart|gotomap|chmap)/gi) {
@@ -38,6 +46,7 @@ sub time_to_seconds {
 	
 	my $slot = $store{"playerslot_byid_$id"};
 	my $time = time_to_seconds $store{"playerslot_$slot"}->{'time'};
+	$time ||= 0;
 	if ($vs->{connected} && $time < $vs->{connected}) {
 		out dp => 0, "sv_cmd vote stop";
 		out irc => 0, "PRIVMSG $config{irc_channel} :* vote \00304$command\017 by " . $store{"playernick_byid_$id"} .
@@ -68,6 +77,7 @@ sub time_to_seconds {
 	if (defined $store{plugin_votestop}->{currentvote}) {
 		out dp => 0, "sv_cmd vote stop";
 		$store{plugin_votestop}->{currentvote} = undef;
+		$vs->{vstopignore} = undef;
 	}
 	return 0;
 } ],
