@@ -18,8 +18,7 @@ if (defined %config && $config{plugins} !~ m/joinsparts.pl /gi) {
 sub out($$@);
 
 sub time_to_seconds {
-	my $in = shift;
-	my @ar = split /:/, $in;
+	my @ar = split /:/, $_[0];
 	return ($ar[0] * 60 * 60) + ($ar[1] * 60) + $ar[2];
 }
 
@@ -29,7 +28,7 @@ sub time_to_seconds {
 	my $vs = $store{plugin_votestop};
 	
 	# use joinsparts for player check, people may call any votes when they're alone.
-	return 0 unless (get_player_count() > 1);
+	return 0 unless ($id && get_player_count() > 1);
 	
 	if ($vs->{mapstart} && (time() - $store{map_starttime}) < $vs->{mapstart}) {
 		if ($command =~ m/^(endmatch|restart|gotomap|chmap)/gi) {
