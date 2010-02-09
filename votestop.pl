@@ -30,20 +30,20 @@ sub time_to_seconds {
 	# use joinsparts for player check, people may call any votes when they're alone.
 	return 0 unless ($id && get_player_count() > 1);
 	
+	my $slot = $store{"playerslot_byid_$id"};
 	if ($vs->{mapstart} && (time() - $store{map_starttime}) < $vs->{mapstart}) {
 		if ($command =~ m/(endmatch|restart|gotomap|chmap)/gi) {
 			out dp => 0, "sv_cmd vote stop";
 			out irc => 0, "PRIVMSG $config{irc_channel} :* vote \00304$command\017 by " . $store{"playernick_byid_$id"} .
 				"\017 was rejected because the map hasn't been played long enough";
 				
-			out dp => 0, "tell #$id your vote was rejected because this map only just started.";
+			out dp => 0, "tell #$slot your vote was rejected because this map only just started.";
 			
 			$vs->{vstopignore} = 1;
 			return -1;
 		}
 	}
 	
-	my $slot = $store{"playerslot_byid_$id"};
 	my $time = time_to_seconds $store{"playerslot_$slot"}->{'time'};
 	$time ||= 0;
 	if ($vs->{connected} && $time < $vs->{connected}) {
@@ -51,7 +51,7 @@ sub time_to_seconds {
 		out irc => 0, "PRIVMSG $config{irc_channel} :* vote \00304$command\017 by " . $store{"playernick_byid_$id"} .
 			"\017 was rejected because he isn't connected long enough";
 			
-		out dp => 0, "tell #$id your vote was rejected because you just joined the server.";
+		out dp => 0, "tell #$slot your vote was rejected because you just joined the server.";
 			
 		$vs->{vstopignore} = 1;
 		return -1;
