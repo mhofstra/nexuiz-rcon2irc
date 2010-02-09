@@ -4,8 +4,8 @@
 # This plugin will stop an ongoing vote when the person who called it leaves.
 
 { my %vs = (
-	mapstart => 60, # can't call mapchange votes for this amount of seconds after mapstart
-	connected => 180, # can't call votes when you just joined the server
+	mapstart => 90, # can't call mapchange votes for this amount of seconds after mapstart
+	connected => 120, # can't call votes when you just joined the server
 );
 
 $store{plugin_votestop} = \%vs; }
@@ -31,7 +31,7 @@ sub time_to_seconds {
 	return 0 unless ($id && get_player_count() > 1);
 	
 	if ($vs->{mapstart} && (time() - $store{map_starttime}) < $vs->{mapstart}) {
-		if ($command =~ m/^(endmatch|restart|gotomap|chmap)/gi) {
+		if ($command =~ m/(endmatch|restart|gotomap|chmap)/gi) {
 			out dp => 0, "sv_cmd vote stop";
 			out irc => 0, "PRIVMSG $config{irc_channel} :* vote \00304$command\017 by " . $store{"playernick_byid_$id"} .
 				"\017 was rejected because the map hasn't been played long enough";
@@ -64,27 +64,38 @@ sub time_to_seconds {
 [ dp => q{:vote:v(yes|no|timeout|stop):.*} => sub {
 	my ($cmd) = @_;
 	$store{plugin_votestop}->{currentvote} = undef;
+	my $vs = $store{plugin_votestop};
 	
 	if ($cmd eq 'stop' && $vs->{vstopignore}) {
 		$vs->{vstopignore} = undef;
 		return -1;
 	}
+	
 	return 0;
 } ],
 
 [ dp => q{:gamestart:(.*):[0-9.]*} => sub {
+	my $vs = $store{plugin_votestop};
+	
 	if (defined $store{plugin_votestop}->{currentvote}) {
 		out dp => 0, "sv_cmd vote stop";
 		$store{plugin_votestop}->{currentvote} = undef;
 		$vs->{vstopignore} = undef;
 	}
+	
 	return 0;
 } ],
 
 [ dp => q{:part:(\d+)} => sub {
 	my ($id) = @_;
+	my $vs = $store{plugin_votestop};
+	
 	if (defined $store{plugin_votestop}->{currentvote} && $id == $store{plugin_votestop}->{currentvote}) {
+		$vs->{vstopignore} = 1;
 		out dp => 0, "sv_cmd vote stop";
+		out irc => 0, "PRIVMSG $config{irc_channel} :* vote \00304$command\017 by " . $store{"playernick_byid_$id"} .
+			"\017 was stopped because he left the server";
 	}
+	
 	return 0;
 } ],
