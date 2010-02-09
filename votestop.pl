@@ -1,11 +1,13 @@
 # Nexuiz rcon2irc plugin by Merlijn Hofstra licensed under GPL - votestop.pl
 # Place this file inside the same directory as rcon2irc.pl and add the full filename to the plugins.
 
-# This plugin will stop an ongoing vote when the person who called it leaves.
+# This plugin will stop an ongoing vote when the person who called it leaves. Edit the options below
+# to disallow votes after certain events.
 
 { my %vs = (
 	mapstart => 90, # can't call mapchange votes for this amount of seconds after mapstart
 	connected => 120, # can't call votes when you just joined the server
+	minplayers => 2, # minimal amount of players for this script to work.
 );
 
 $store{plugin_votestop} = \%vs; }
@@ -27,19 +29,19 @@ sub time_to_seconds {
 	$command = color_dp2irc $command;
 	my $vs = $store{plugin_votestop};
 	
-	# use joinsparts for player check, people may call any votes when they're alone.
-	return 0 unless ($id && get_player_count() > 1);
+	# use joinsparts for player check
+	return 0 unless ($id && get_player_count() >= $vs->{minplayers});
 	
 	my $slot = $store{"playerslot_byid_$id"};
 	if ($vs->{mapstart} && (time() - $store{map_starttime}) < $vs->{mapstart}) {
 		if ($command =~ m/(endmatch|restart|gotomap|chmap)/gi) {
+			$vs->{vstopignore} = 1;
 			out dp => 0, "sv_cmd vote stop";
 			out irc => 0, "PRIVMSG $config{irc_channel} :* vote \00304$command\017 by " . $store{"playernick_byid_$id"} .
 				"\017 was rejected because the map hasn't been played long enough";
 				
 			out dp => 0, "tell #$slot your vote was rejected because this map only just started.";
 			
-			$vs->{vstopignore} = 1;
 			return -1;
 		}
 	}
@@ -47,13 +49,13 @@ sub time_to_seconds {
 	my $time = time_to_seconds $store{"playerslot_$slot"}->{'time'};
 	$time ||= 0;
 	if ($vs->{connected} && $time < $vs->{connected}) {
+		$vs->{vstopignore} = 1;
 		out dp => 0, "sv_cmd vote stop";
 		out irc => 0, "PRIVMSG $config{irc_channel} :* vote \00304$command\017 by " . $store{"playernick_byid_$id"} .
 			"\017 was rejected because he isn't connected long enough";
 			
 		out dp => 0, "tell #$slot your vote was rejected because you just joined the server.";
 			
-		$vs->{vstopignore} = 1;
 		return -1;
 	}
 	
@@ -74,18 +76,6 @@ sub time_to_seconds {
 	return 0;
 } ],
 
-[ dp => q{:gamestart:(.*):[0-9.]*} => sub {
-	my $vs = $store{plugin_votestop};
-	
-	if (defined $store{plugin_votestop}->{currentvote}) {
-		out dp => 0, "sv_cmd vote stop";
-		$store{plugin_votestop}->{currentvote} = undef;
-		$vs->{vstopignore} = undef;
-	}
-	
-	return 0;
-} ],
-
 [ dp => q{:part:(\d+)} => sub {
 	my ($id) = @_;
 	my $vs = $store{plugin_votestop};
@@ -95,6 +85,18 @@ sub time_to_seconds {
 		out dp => 0, "sv_cmd vote stop";
 		out irc => 0, "PRIVMSG $config{irc_channel} :* vote \00304$command\017 by " . $store{"playernick_byid_$id"} .
 			"\017 was stopped because he left the server";
+	}
+	
+	return 0;
+} ],
+
+[ dp => q{:gamestart:(.*):[0-9.]*} => sub {
+	my $vs = $store{plugin_votestop};
+	
+	if (defined $store{plugin_votestop}->{currentvote}) {
+		out dp => 0, "sv_cmd vote stop";
+		$store{plugin_votestop}->{currentvote} = undef;
+		$vs->{vstopignore} = undef;
 	}
 	
 	return 0;
