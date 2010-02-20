@@ -83,7 +83,7 @@ sub time_to_seconds {
 	if (defined $store{plugin_votestop}->{currentvote} && $id == $store{plugin_votestop}->{currentvote}) {
 		$vs->{vstopignore} = 1;
 		out dp => 0, "sv_cmd vote stop";
-		out irc => 0, "PRIVMSG $config{irc_channel} :* vote \00304$command\017 by " . $store{"playernick_byid_$id"} .
+		out irc => 0, "PRIVMSG $config{irc_channel} :* current by " . $store{"playernick_byid_$id"} .
 			"\017 was stopped because he left the server";
 	}
 	
